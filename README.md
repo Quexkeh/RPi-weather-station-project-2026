@@ -121,17 +121,19 @@ conflicts.
 
 6.  Plug-and-play into the RPi 5.
 
-7.  Go to terminal to check date and time.
+7.  Connect to the internet. NUSGuest is often unstable so it's recommended to hotspot to your phone data for now. Then go to terminal to check date and time. On the sudo lines, if you're prompted to enter password, enter '12345' (without the '').
 
 ``` bash
 # Check date and time
 timedatectl
 
-# Change date and time
+# Change date and time, set location, then ensure that it syncs to internet time.
 sudo date -s "25 MAY 2026 11:37:00" # Edit accordingly
+sudo timedatectl set-timezone Asia/Singapore
+sudo timedatectl set-ntp true
 ```
 
-7.  Hold kernel and OS versions and freeze dependencies:
+8.  Hold kernel and OS versions and freeze dependencies:
 
 ``` bash
 # Hold kernel and OS
