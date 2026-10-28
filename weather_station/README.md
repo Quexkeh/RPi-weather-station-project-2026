@@ -58,6 +58,12 @@ environments**. If a script fails unexpectedly, it could be that you may
 have the wrong virtual environment active (they are named the same). In
 that case, run `deactivate` and repeat from step 1.
 
+3.  Finally, weather.py assumes the particle sensor is located at port /dev/ttyUSB0. Thus, to make sure the particle sensor is active on RPi, enter on Terminal:
+
+    ```ls /dev/tty*``` 
+
+    If /dev/ttyUSB0 is present as one of the folders, then you're correct. Otherwise, reattach your particle sensor to another USB port and repeat the above command until you see the right folder.
+
 ------------------------------------------------------------------------
 
 ### Execute `weather.py` on boot
