@@ -43,7 +43,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets"
 ]
 creds = Credentials.from_service_account_file(
-    "/home/pi/weatherstation/service_account.json",
+    "./service_account.json",
     scopes=SCOPES
 )
 
