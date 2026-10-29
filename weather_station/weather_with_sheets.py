@@ -14,6 +14,7 @@ import adafruit_dht
 import board
 import gspread
 from google.oauth2.service_account import Credentials
+import csv
 
 ############################################################
 # INPUT SECTION                                            #
@@ -38,20 +39,13 @@ recording_interval = 5
 # GOOGLE SHEETS STUFF (Thanks chatgpt)                     #
 ############################################################
 SPREADSHEET_ID = "1cKf14QsvX0Flm7gRxxmZlrO4z-VHLUk5V8hBc-u0jlA"
-
+CREDENTIALS_FILE = "./service_account.json"
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets"
 ]
-creds = Credentials.from_service_account_file(
-    "./service_account.json",
-    scopes=SCOPES
-)
 
-client = gspread.authorize(creds)
-
-sheet = client.open_by_key(
-    SPREADSHEET_ID
-).worksheet("Raw Data")
+sheet = None
+last_uploaded_row = 0
 
 ############################################################
 # CHANNEL CREATION OF HUMIDITY AND TEMPERATURE DHT22 SENSOR#
@@ -192,15 +186,7 @@ def recording():
 
         with open(filename + ".tsv", 'a') as f:
             f.write(data_pt)
-            row = [
-                timestamp,
-                h,
-                values[0],
-                values[1],
-                temperature,
-                humidity
-            ]
-            upload_to_sheets(row)
+            upload_to_sheets()
         
         print(timestamp)
         print(f"Hour= {h:1}  PM2.5 = {values[0]:1.2f}ug/m^3  PM10= {values[1]:1.2f}ug/m^3  Temp= {temperature:1.2f}*C  Humidity= {humidity:1.2f}%")
@@ -216,17 +202,81 @@ def recording():
 ############################################################
 # GOOGLE SHEET FUNCTIONS (thanks chatgpt)                  #
 ############################################################
-def upload_to_sheets(data):
+
+def connect_to_sheets():
+    global sheet, last_uploaded_row
+
     try:
-        sheet.append_row(
-            data,
-            value_input_option="USER_ENTERED"
+        creds = Credentials.from_service_account_file(
+            CREDENTIALS_FILE,
+            scopes=SCOPES
         )
-        print("Uploaded to Google Sheets")
+
+        client = gspread.authorize(creds)
+
+        sheet = client.open_by_key(
+            SPREADSHEET_ID
+        ).worksheet("Sheet1")
+
+        # Assuming row 1 contains headers
+        last_uploaded_row = max(
+            0,
+            len(sheet.col_values(1)) - 1
+        )
+
+        print("Connected to Google Sheets")
+        return True
+
+    except Exception as e:
+        sheet = None
+        print(f"Google Sheets connection failed: {e}")
+        return False
+
+#def upload_to_sheets(data):
+#    try:
+#        sheet.append_row(
+#            data,
+#            value_input_option="USER_ENTERED"
+#        )
+#        print("Uploaded to Google Sheets")
+#
+#    except Exception as e:
+#        print(f"Google Sheets upload failed: {e}")
+
+def upload_to_sheets():
+    global sheet, last_uploaded_row
+
+    # Connect only when needed
+    if sheet is None:
+        if not connect_to_sheets():
+            print("Google Sheets unavailable.")
+            return
+
+    try:
+        with open(filename + ".tsv", "r") as f:
+            reader = csv.reader(f, delimiter="\t")
+
+            for row_number, row in enumerate(reader, start=1):
+
+                # Skip previously uploaded rows
+                if row_number <= last_uploaded_row:
+                    continue
+
+                # Upload one row at a time
+                sheet.append_row(
+                    row,
+                    value_input_option="USER_ENTERED",
+                    table_range="A1:F"
+                )
+
+                # Update only after successful upload
+                last_uploaded_row = row_number
+
+        print("Google Sheets synchronized")
 
     except Exception as e:
         print(f"Google Sheets upload failed: {e}")
-
+        sheet = None
 
 ############################################################
 # EXECUTION OF WEATHER STATION                             #
